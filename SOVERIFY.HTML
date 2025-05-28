@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verifying...</title>
+</head>
+<body>
+  <h2 id="status">⏳ Verifying your link...</h2>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ✅ Use this public config (do NOT include private_key or client_email)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDG5SQlKGdGYMOqlavgldqjw8ZbGfKsEkM",
+      authDomain: "socail-down.firebaseapp.com",
+      projectId: "socail-down",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Get activation key from URL
+    const key = window.location.pathname.split("/").pop();
+
+    document.getElementById("status").textContent = `🔍 Checking key: ${key}...`;
+
+    db.collection("users").where("activation_key", "==", key).get().then(snapshot => {
+      if (snapshot.empty) {
+        document.getElementById("status").textContent = "❌ Invalid or expired key.";
+        return;
+      }
+
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      const now = new Date();
+
+      if (data.used) {
+        document.getElementById("status").textContent = "⚠️ This link has already been used.";
+      } else if (new Date(data.expires_at) < now) {
+        document.getElementById("status").textContent = "❌ This link has expired.";
+      } else {
+        doc.ref.update({ verified: true, used: true });
+        document.getElementById("status").textContent = "✅ Verification successful! You may now return to Telegram.";
+      }
+    }).catch(err => {
+      console.error(err);
+      document.getElementById("status").textContent = "❌ An error occurred. Please try again.";
+    });
+  </script>
+</body>
+</html>
