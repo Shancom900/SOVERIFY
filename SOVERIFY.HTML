@@ -3,53 +3,127 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Verifying...</title>
-</head>
-<body>
-  <h2 id="status">⏳ Verifying your link...</h2>
+  <title>SoVerify | Verification Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      font-family: 'Space Grotesk', sans-serif;
+    }
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    body {
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-  <script>
-    // ✅ Use this public config (do NOT include private_key or client_email)
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 40px;
+      border-radius: 16px;
+      text-align: center;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      animation: slideIn 1s ease;
+    }
+
+    .card h1 {
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 6px solid rgba(255,255,255,0.2);
+      border-top: 6px solid #00ffe7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+      0% { transform: translateY(30px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .verified {
+      color: #00ffb3;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyDG5SQlKGdGYMOqlavgldqjw8ZbGfKsEkM",
+      apiKey: "AIzaSyCm_XeZEkHvFLA_LRNUXAx8HAvkk7XxBHI",
       authDomain: "socail-down.firebaseapp.com",
       projectId: "socail-down",
+      storageBucket: "socail-down.appspot.com",
+      messagingSenderId: "401647702225",
+      appId: "1:401647702225:web:e11375558e6ab3d06c288a"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    // Get activation key from URL
-    const key = window.location.pathname.split("/").pop();
+    async function verifyUser() {
+      const userId = window.location.pathname.slice(1);
+      const statusText = document.getElementById("status");
+      const spinner = document.querySelector(".spinner");
 
-    document.getElementById("status").textContent = `🔍 Checking key: ${key}...`;
-
-    db.collection("users").where("activation_key", "==", key).get().then(snapshot => {
-      if (snapshot.empty) {
-        document.getElementById("status").textContent = "❌ Invalid or expired key.";
+      if (!userId) {
+        spinner.style.display = "none";
+        statusText.innerHTML = "<span class='error'>❌ Invalid link</span>";
         return;
       }
 
-      const doc = snapshot.docs[0];
-      const data = doc.data();
-      const now = new Date();
-
-      if (data.used) {
-        document.getElementById("status").textContent = "⚠️ This link has already been used.";
-      } else if (new Date(data.expires_at) < now) {
-        document.getElementById("status").textContent = "❌ This link has expired.";
-      } else {
-        doc.ref.update({ verified: true, used: true });
-        document.getElementById("status").textContent = "✅ Verification successful! You may now return to Telegram.";
+      try {
+        await setDoc(doc(db, "verifications", userId), {
+          used: true,
+          timestamp: serverTimestamp()
+        });
+        spinner.style.display = "none";
+        statusText.innerHTML = "<span class='verified'>✅ Verified successfully!</span><br/>You may now return to the bot.";
+      } catch (error) {
+        console.error("Verification error:", error);
+        spinner.style.display = "none";
+        statusText.innerHTML = "<span class='error'>❌ Verification failed</span><br/>Try again later.";
       }
-    }).catch(err => {
-      console.error(err);
-      document.getElementById("status").textContent = "❌ An error occurred. Please try again.";
-    });
+    }
+
+    verifyUser();
   </script>
+</head>
+<body>
+  <div class="card">
+    <h1>🔐 Verifying Access...</h1>
+    <div class="spinner"></div>
+    <div id="status" class="status">Please wait while we verify you securely.</div>
+  </div>
 </body>
 </html>
